@@ -18,7 +18,7 @@ A tela deve conter uma lista com os filmes que deverão entrar em cartaz em brev
 - Swift UI.
 
 **No Android utilize**
-- Constraint Layout.
+- Jetpack Compose.
 
 
 
