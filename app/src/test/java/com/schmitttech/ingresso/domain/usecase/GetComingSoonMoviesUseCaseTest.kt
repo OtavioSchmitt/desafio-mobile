@@ -56,7 +56,7 @@ class GetComingSoonMoviesUseCaseTest {
             premiereDate = date?.let { OffsetDateTime.parse(it) },
             inPreSale = false,
             synopsis = "",
-            genres = emptyList(),
+            categories = emptyList(),
             duration = null,
             rating = null
         )

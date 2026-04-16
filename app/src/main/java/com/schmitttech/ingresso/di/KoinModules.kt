@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.dsl.module
 import com.schmitttech.ingresso.BuildConfig
+import com.schmitttech.ingresso.presentation.details.DetailsViewModel
 import com.schmitttech.ingresso.presentation.home.HomeViewModel
 import org.koin.core.module.dsl.viewModel
 import retrofit2.Retrofit
@@ -52,6 +53,7 @@ val domainModule = module {
 
 val presentationModule = module {
     viewModel { HomeViewModel(get()) }
+    viewModel { DetailsViewModel(get()) }
 }
 
 val appModule = listOf(networkModule, dataModule, domainModule, presentationModule)

@@ -13,7 +13,7 @@ data class Movie(
     val premiereDate: OffsetDateTime?,
     val inPreSale: Boolean,
     val synopsis: String,
-    val genres: List<String>,
+    val categories: List<String>,
     val duration: String?,
     val rating: Rating?
 )

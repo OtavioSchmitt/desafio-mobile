@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Ingresso</string>
+    <string name="coming_soon">Em Breve</string>
+    <string name="movies">Filmes</string>
+    <string name="explore">Explorar</string>
+    <string name="all">Todos</string>
+    <string name="empty_filter">Nenhum filme encontrado para este filtro.</string>
+    <string name="back">Voltar</string>
+    <string name="duration">Duração</string>
+    <string name="duration_minutes">%s min</string>
+    <string name="premiere">Estreia</string>
+    <string name="categories">Categorias</string>
+    <string name="rating">Classificação</string>
+    <string name="synopsis">Sinopse</string>
+    <string name="search_placeholder">Explorar Gêneros (Em breve)</string>
+    <string name="error_title">Ops! Algo deu errado</string>
+    <string name="error_retry">Tentar novamente</string>
+    <string name="error_unexpected">Um erro inesperado ocorreu</string>
+    <string name="error_not_found">Filme não encontrado</string>
+    <string name="error_load">Erro ao carregar detalhes</string>
+</resources>

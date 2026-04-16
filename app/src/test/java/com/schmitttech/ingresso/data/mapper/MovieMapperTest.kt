@@ -43,7 +43,7 @@ class MovieMapperTest {
         assertEquals("Test Movie", movie.title)
         assertEquals(true, movie.inPreSale)
         assertEquals("Awesome synopsis", movie.synopsis)
-        assertEquals(listOf("Action", "Drama"), movie.genres)
+        assertEquals(listOf("Action", "Drama"), movie.categories)
         assertEquals("120", movie.duration)
         assertEquals("portrait.jpg", movie.posterUrl)
         assertEquals(OffsetDateTime.parse("2026-04-18T00:00:00+00:00"), movie.premiereDate)
