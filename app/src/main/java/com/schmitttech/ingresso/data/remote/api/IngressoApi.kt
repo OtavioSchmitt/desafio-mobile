@@ -5,7 +5,7 @@ import retrofit2.http.GET
 
 interface IngressoApi {
 
-    @GET("v0/events/coming-soon/partnership/desafio")
+    @GET(NetworkConstants.COMING_SOON_ENDPOINT)
     suspend fun getComingSoonMovies(): MoviesResponse
-
 }
+
