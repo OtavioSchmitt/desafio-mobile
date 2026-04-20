@@ -15,6 +15,7 @@ import com.schmitttech.ingresso.presentation.details.DetailsViewModel
 import com.schmitttech.ingresso.presentation.favorites.FavoritesViewModel
 import com.schmitttech.ingresso.presentation.home.HomeViewModel
 import com.schmitttech.ingresso.presentation.presale.PreSaleViewModel
+import com.schmitttech.ingresso.data.util.NetworkHelper
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -50,6 +51,7 @@ val networkModule = module {
     }
 
     single<IngressoApi> { get<Retrofit>().create(IngressoApi::class.java) }
+    single { NetworkHelper(androidContext()) }
 }
 
 val localModule = module {
@@ -75,7 +77,7 @@ val domainModule = module {
 }
 
 val presentationModule = module {
-    viewModel { HomeViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { DetailsViewModel(get(), get()) }
     viewModel { FavoritesViewModel(get()) }
     viewModel { PreSaleViewModel(get()) }

@@ -29,9 +29,13 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -39,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.schmitttech.ingresso.R
+import kotlinx.coroutines.flow.collectLatest
 import com.schmitttech.ingresso.presentation.common.MovieCard
 import com.schmitttech.ingresso.presentation.home.components.GenresList
 
@@ -51,12 +56,21 @@ fun HomeRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isSearchActive by viewModel.isSearchActive.collectAsState()
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    LaunchedEffect(Unit) {
+        viewModel.eventFlow.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
 
     HomeScreen(
         uiState = uiState,
         isRefreshing = isRefreshing,
         searchQuery = searchQuery,
         isSearchActive = isSearchActive,
+        snackbarHostState = snackbarHostState,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onToggleSearch = viewModel::toggleSearch,
         onGenreSelected = viewModel::onGenreSelected,
@@ -71,6 +85,7 @@ fun HomeScreen(
     isRefreshing: Boolean,
     searchQuery: String,
     isSearchActive: Boolean,
+    snackbarHostState: SnackbarHostState,
     onSearchQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
     onGenreSelected: (String?) -> Unit,
@@ -80,6 +95,7 @@ fun HomeScreen(
     val gridState = rememberLazyGridState()
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -117,8 +133,10 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
+        val showPullToRefresh = isRefreshing && uiState is HomeUiState.Success
+        
         PullToRefreshBox(
-            isRefreshing = isRefreshing && uiState !is HomeUiState.Loading,
+            isRefreshing = showPullToRefresh,
             onRefresh = onRefresh,
             modifier = Modifier
                 .fillMaxSize()

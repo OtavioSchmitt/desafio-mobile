@@ -1,9 +1,11 @@
 package com.schmitttech.ingresso.presentation.home
 
 import android.util.Log
+import com.schmitttech.ingresso.data.util.NetworkHelper
 import com.schmitttech.ingresso.domain.model.Movie
 import com.schmitttech.ingresso.domain.repository.MoviesRepository
 import com.schmitttech.ingresso.domain.usecase.GetComingSoonMoviesUseCase
+import io.mockk.called
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +32,7 @@ class HomeViewModelTest {
 
     private val useCase: GetComingSoonMoviesUseCase = mockk()
     private val repository: MoviesRepository = mockk()
+    private val networkHelper: NetworkHelper = mockk()
     private lateinit var viewModel: HomeViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -39,6 +42,7 @@ class HomeViewModelTest {
         every { Log.d(any(), any()) } returns 0
         every { Log.e(any(), any()) } returns 0
         every { Log.e(any(), any(), any()) } returns 0
+        every { networkHelper.isOnline() } returns true
         Dispatchers.setMain(testDispatcher)
     }
 
@@ -54,7 +58,7 @@ class HomeViewModelTest {
         every { useCase() } returns flowOf(movies)
         coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase, repository)
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
 
         val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
             viewModel.uiState.collect() 
@@ -74,7 +78,7 @@ class HomeViewModelTest {
         every { useCase() } returns flowOf(movies)
         coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase, repository)
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
         val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
             viewModel.uiState.collect() 
         }
@@ -100,7 +104,7 @@ class HomeViewModelTest {
         every { useCase() } returns flowOf(movies)
         coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase, repository)
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
         val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
             viewModel.uiState.collect() 
         }
@@ -125,7 +129,7 @@ class HomeViewModelTest {
         every { useCase() } returns flowOf(movies)
         coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase, repository)
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
         val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
             viewModel.uiState.collect() 
         }
@@ -142,7 +146,7 @@ class HomeViewModelTest {
         every { useCase() } returns flowOf(emptyList())
         coEvery { repository.refreshMovies() } returns Result.failure(Exception("Generic Error"))
 
-        viewModel = HomeViewModel(useCase, repository)
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
         val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
             viewModel.uiState.collect() 
         }
@@ -151,6 +155,45 @@ class HomeViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(state is HomeUiState.Error)
         assertEquals("Generic Error", (state as HomeUiState.Error).message)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `refreshMovies failure should NOT update error state if movies exist`() = runTest {
+        val movies = listOf(mockMovie("1"))
+        every { useCase() } returns flowOf(movies)
+        coEvery { repository.refreshMovies() } returns Result.failure(Exception("Network Error"))
+
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Success)
+        assertEquals(1, (state as HomeUiState.Success).movies.size)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `refreshMovies should NOT be called when offline`() = runTest {
+        every { useCase() } returns flowOf(emptyList())
+        every { networkHelper.isOnline() } returns false
+
+        viewModel = HomeViewModel(useCase, repository, networkHelper)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Error)
+        assertEquals("No internet connection", (state as HomeUiState.Error).message)
+
+        io.mockk.verify { repository wasNot called }
 
         collectJob.cancel()
     }
