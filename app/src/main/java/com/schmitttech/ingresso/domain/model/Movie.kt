@@ -15,7 +15,8 @@ data class Movie(
     val synopsis: String,
     val categories: List<String>,
     val duration: String?,
-    val rating: Rating?
+    val rating: Rating?,
+    val isFavorite: Boolean = false
 )
 
 data class Rating(

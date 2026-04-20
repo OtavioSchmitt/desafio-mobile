@@ -9,7 +9,10 @@ import kotlinx.serialization.Serializable
 data object HomeRoute
 
 @Serializable
-data object SearchRoute
+data object PreSaleRoute
+
+@Serializable
+data object FavoritesRoute
 
 @Serializable
 data class DetailsRoute(

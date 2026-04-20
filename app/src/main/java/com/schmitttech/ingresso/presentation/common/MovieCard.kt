@@ -1,4 +1,4 @@
-package com.schmitttech.ingresso.presentation.home.components
+package com.schmitttech.ingresso.presentation.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

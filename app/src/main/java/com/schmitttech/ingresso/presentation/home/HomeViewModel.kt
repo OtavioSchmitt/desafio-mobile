@@ -2,7 +2,7 @@ package com.schmitttech.ingresso.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.schmitttech.ingresso.domain.model.Movie
+import com.schmitttech.ingresso.domain.repository.MoviesRepository
 import com.schmitttech.ingresso.domain.usecase.GetComingSoonMoviesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,35 +17,40 @@ import kotlinx.coroutines.launch
  * with reactive filtering and sorting.
  */
 class HomeViewModel(
-    private val getComingSoonMoviesUseCase: GetComingSoonMoviesUseCase
+    getComingSoonMoviesUseCase: GetComingSoonMoviesUseCase,
+    private val repository: MoviesRepository
 ) : ViewModel() {
 
-    private val _movies = MutableStateFlow<List<Movie>>(emptyList())
-    private val _selectedGenre = MutableStateFlow<String?>(null)
+    private val _searchQuery = MutableStateFlow("")
+    private val _isSearchActive = MutableStateFlow(false)
     private val _isLoading = MutableStateFlow(true)
     private val _error = MutableStateFlow<String?>(null)
+
+    val searchQuery: StateFlow<String> = _searchQuery
+    val isSearchActive: StateFlow<Boolean> = _isSearchActive
+    val isRefreshing: StateFlow<Boolean> = _isLoading
 
     /**
      * Observable state that the Compose UI will collect.
      * Combines multiple flows to produce a single source of truth for the UI.
      */
     val uiState: StateFlow<HomeUiState> = combine(
-        _movies, _selectedGenre, _isLoading, _error
-    ) { movies, selectedGenre, isLoading, error ->
+        getComingSoonMoviesUseCase(), _searchQuery, _isSearchActive, _isLoading, _error
+    ) { movies, query, searchActive, isLoading, error ->
         when {
             error != null -> HomeUiState.Error(error)
-            isLoading -> HomeUiState.Loading
+            isLoading && movies.isEmpty() -> HomeUiState.Loading
             else -> {
-                val filtered = if (selectedGenre == null) {
-                    movies
+                val filtered = if (searchActive && query.isNotBlank()) {
+                    movies.filter { it.title.contains(query, ignoreCase = true) }
                 } else {
-                    movies.filter { it.categories.contains(selectedGenre) }
+                    movies
                 }
 
                 HomeUiState.Success(
                     movies = filtered,
-                    genres = movies.flatMap { it.categories }.distinct().sorted(),
-                    selectedGenre = selectedGenre
+                    genres = emptyList(),
+                    selectedGenre = null
                 )
             }
         }
@@ -60,26 +65,30 @@ class HomeViewModel(
     }
 
     /**
-     * Fetches movies from the UseCase and updates the internal state.
+     * Triggers a background refresh and observes the cache.
      */
     fun getMovies() {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            
-            getComingSoonMoviesUseCase()
-                .onSuccess { movies ->
-                    _movies.value = movies
-                    _isLoading.value = false
-                }
-                .onFailure { exception ->
+
+            repository.refreshMovies().onFailure { exception ->
+                if (uiState.value !is HomeUiState.Success || (uiState.value as HomeUiState.Success).movies.isEmpty()) {
                     _error.value = exception.message ?: "An unexpected error occurred"
-                    _isLoading.value = false
                 }
+            }
+            _isLoading.value = false
         }
     }
 
-    fun onGenreSelected(genre: String?) {
-        _selectedGenre.value = genre
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun toggleSearch() {
+        _isSearchActive.value = !_isSearchActive.value
+        if (!_isSearchActive.value) {
+            _searchQuery.value = ""
+        }
     }
 }

@@ -6,18 +6,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,13 +48,15 @@ import coil3.compose.AsyncImage
 import com.schmitttech.ingresso.R
 import com.schmitttech.ingresso.domain.model.Movie
 import com.schmitttech.ingresso.presentation.common.RatingBadge
+import com.schmitttech.ingresso.presentation.common.MovieCard
 import com.schmitttech.ingresso.ui.util.DateFormatter
 
 @Composable
 fun DetailsRoute(
     movieId: String,
     viewModel: DetailsViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onMovieClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -56,13 +64,22 @@ fun DetailsRoute(
         viewModel.getMovieDetails(movieId)
     }
 
-    DetailsScreen(uiState = uiState, onBackClick = onBackClick)
+    DetailsScreen(
+        uiState = uiState,
+        onBackClick = onBackClick,
+        onMovieClick = onMovieClick,
+        onFavoriteClick = { isFavorite ->
+            viewModel.toggleFavorite(movieId, isFavorite)
+        }
+    )
 }
 
 @Composable
 fun DetailsScreen(
     uiState: DetailsUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onMovieClick: (String) -> Unit,
+    onFavoriteClick: (Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -84,6 +101,17 @@ fun DetailsScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
+                },
+                actions = {
+                    if (uiState is DetailsUiState.Success) {
+                        IconButton(onClick = { onFavoriteClick(!uiState.movie.isFavorite) }) {
+                            Icon(
+                                imageVector = if (uiState.movie.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = stringResource(R.string.details_favorite_cd),
+                                tint = if (uiState.movie.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             )
         },
@@ -100,6 +128,8 @@ fun DetailsScreen(
             is DetailsUiState.Success -> {
                 MovieDetailLayout(
                     movie = uiState.movie,
+                    relatedMovies = uiState.relatedMovies,
+                    onMovieClick = onMovieClick,
                     modifier = Modifier.padding(padding)
                 )
             }
@@ -127,22 +157,24 @@ fun DetailsScreen(
     }
 }
 
-/**
- * Side-by-side layout (poster left | info right), matching the reference design.
- */
 @Composable
-private fun MovieDetailLayout(movie: Movie, modifier: Modifier = Modifier) {
+private fun MovieDetailLayout(
+    movie: Movie, 
+    relatedMovies: List<Movie>, 
+    onMovieClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val scrollState = rememberScrollState()
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(16.dp),
+            .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -194,7 +226,31 @@ private fun MovieDetailLayout(movie: Movie, modifier: Modifier = Modifier) {
         }
 
         if (movie.synopsis.isNotBlank()) {
-            DetailSection(label = stringResource(R.string.synopsis), content = movie.synopsis)
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                DetailSection(label = stringResource(R.string.synopsis), content = movie.synopsis)
+            }
+        }
+
+        if (relatedMovies.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.related_movies),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(relatedMovies, key = { it.id }) { relatedMovie ->
+                    MovieCard(
+                        movie = relatedMovie,
+                        onClick = { onMovieClick(relatedMovie.id) },
+                        modifier = Modifier.width(160.dp)
+                    )
+                }
+            }
         }
     }
 }
