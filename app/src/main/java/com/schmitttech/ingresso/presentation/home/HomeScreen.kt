@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -39,10 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.schmitttech.ingresso.R
 import com.schmitttech.ingresso.presentation.common.MovieCard
+import com.schmitttech.ingresso.presentation.home.components.GenresList
 
-/**
- * Entry point for the Home screen that interacts with the ViewModel.
- */
 @Composable
 fun HomeRoute(
     viewModel: HomeViewModel,
@@ -60,14 +59,12 @@ fun HomeRoute(
         isSearchActive = isSearchActive,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onToggleSearch = viewModel::toggleSearch,
+        onGenreSelected = viewModel::onGenreSelected,
         onRefresh = viewModel::getMovies,
         onMovieClick = onMovieClick
     )
 }
 
-/**
- * Stateless UI for the Home screen.
- */
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
@@ -76,6 +73,7 @@ fun HomeScreen(
     isSearchActive: Boolean,
     onSearchQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
+    onGenreSelected: (String?) -> Unit,
     onRefresh: () -> Unit,
     onMovieClick: (String) -> Unit
 ) {
@@ -134,17 +132,36 @@ fun HomeScreen(
                 }
 
                 is HomeUiState.Success -> {
-                    if (uiState.movies.isEmpty()) {
-                        EmptyContent(stringResource(R.string.empty_filter))
-                    } else {
-                        LazyVerticalGrid(
-                            state = gridState,
-                            columns = GridCells.Fixed(2),
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        item(span = { GridItemSpan(2) }) {
+                            GenresList(
+                                genres = uiState.genres,
+                                selectedGenre = uiState.selectedGenre,
+                                onGenreSelected = onGenreSelected
+                            )
+                        }
+
+                        if (uiState.movies.isEmpty()) {
+                            item(span = { GridItemSpan(2) }) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 48.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(stringResource(R.string.empty_filter))
+                                }
+                            }
+                        } else {
                             items(uiState.movies, key = { it.id }) { movie ->
                                 MovieCard(movie = movie, onClick = onMovieClick)
                             }
@@ -163,7 +180,9 @@ fun HomeScreen(
 @Composable
 private fun ErrorContent(message: String, onRetry: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -174,15 +193,5 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         )
         Text(text = message, modifier = Modifier.padding(vertical = 8.dp))
         Button(onClick = onRetry) { Text(stringResource(R.string.error_retry)) }
-    }
-}
-
-@Composable
-private fun EmptyContent(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge
-        )
     }
 }

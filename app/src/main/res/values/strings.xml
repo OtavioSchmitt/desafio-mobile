@@ -9,7 +9,7 @@
     <string name="duration">Duration</string>
     <string name="duration_minutes">%s min</string>
     <string name="premiere">Premiere</string>
-    <string name="categories">Categories</string>
+    <string name="genres">Genres</string>
     <string name="rating">Rating</string>
     <string name="synopsis">Synopsis</string>
     <string name="search_placeholder">Search movies by name…</string>

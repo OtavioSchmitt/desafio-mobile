@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/**
- * UI State for the Movie Details screen.
- */
 sealed interface DetailsUiState {
     data object Loading : DetailsUiState
     data class Success(
@@ -27,9 +24,6 @@ sealed interface DetailsUiState {
     data class Error(val message: String) : DetailsUiState
 }
 
-/**
- * ViewModel for the Details screen.
- */
 class DetailsViewModel(
     private val getMovieDetailsUseCase: GetMovieDetailsUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase

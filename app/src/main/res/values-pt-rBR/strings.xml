@@ -10,7 +10,7 @@
     <string name="duration">Duração</string>
     <string name="duration_minutes">%s min</string>
     <string name="premiere">Estreia</string>
-    <string name="categories">Categorias</string>
+    <string name="genres">Gêneros</string>
     <string name="rating">Classificação</string>
     <string name="synopsis">Sinopse</string>
     <string name="search_placeholder">Buscar filmes por nome…</string>

@@ -7,10 +7,6 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
 
-/**
- * Main Application class for the Ingresso app.
- * Initializes the Koin dependency injection framework.
- */
 class IngressoApplication : Application() {
     override fun onCreate() {
         super.onCreate()

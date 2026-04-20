@@ -17,7 +17,7 @@ interface MovieDao {
     suspend fun upsertAll(movies: List<MovieEntity>)
 
     /** Emits the full movie list reactively whenever the table changes. */
-    @Query("SELECT * FROM movies ORDER BY premiereDate ASC NULLS LAST")
+    @Query("SELECT * FROM movies ORDER BY CASE WHEN premiereDate IS NULL THEN 1 ELSE 0 END ASC, premiereDate ASC")
     fun observeAll(): Flow<List<MovieEntity>>
 
     /** Returns a single movie by ID synchronously (for details screen). */
@@ -35,7 +35,7 @@ interface MovieDao {
     /**
      * Returns movies that are in pre-sale.
      */
-    @Query("SELECT * FROM movies WHERE inPreSale = 1 ORDER BY premiereDate ASC")
+    @Query("SELECT * FROM movies WHERE inPreSale = 1 ORDER BY CASE WHEN premiereDate IS NULL THEN 1 ELSE 0 END ASC, premiereDate ASC")
     fun observePreSale(): Flow<List<MovieEntity>>
 
     /**

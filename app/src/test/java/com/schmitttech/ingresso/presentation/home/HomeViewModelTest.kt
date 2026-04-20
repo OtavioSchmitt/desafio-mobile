@@ -1,12 +1,18 @@
 package com.schmitttech.ingresso.presentation.home
 
+import android.util.Log
 import com.schmitttech.ingresso.domain.model.Movie
+import com.schmitttech.ingresso.domain.repository.MoviesRepository
 import com.schmitttech.ingresso.domain.usecase.GetComingSoonMoviesUseCase
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -23,35 +29,38 @@ import org.junit.Test
 class HomeViewModelTest {
 
     private val useCase: GetComingSoonMoviesUseCase = mockk()
+    private val repository: MoviesRepository = mockk()
     private lateinit var viewModel: HomeViewModel
     private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setup() {
+        mockkStatic(Log::class)
+        every { Log.d(any(), any()) } returns 0
+        every { Log.e(any(), any()) } returns 0
+        every { Log.e(any(), any(), any()) } returns 0
         Dispatchers.setMain(testDispatcher)
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        unmockkStatic(Log::class)
     }
 
-    /**
-     * SharingStarted.WhileSubscribed requires an active collector.
-     * We launch a collect coroutine within the test scope to activate the stateIn flow.
-     */
     @Test
-    fun `init should transition to Success state after data is loaded`() = runTest {
-        // Given
+    fun `when created then should transition to success state with movies`() = runTest {
         val movies = listOf(mockMovie("1"), mockMovie("2"))
-        coEvery { useCase() } returns Result.success(movies)
+        every { useCase() } returns flowOf(movies)
+        coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase)
+        viewModel = HomeViewModel(useCase, repository)
 
-        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
         advanceUntilIdle()
 
-        // Then
         val state = viewModel.uiState.value
         assertTrue(state is HomeUiState.Success)
         assertEquals(2, (state as HomeUiState.Success).movies.size)
@@ -60,42 +69,88 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `init should transition to Error state on network failure`() = runTest {
-        // Given
-        val errorMessage = "Network Error"
-        coEvery { useCase() } returns Result.failure(Exception(errorMessage))
+    fun `when search query changes then should filter movies`() = runTest {
+        val movies = listOf(mockMovie("1", title = "Batman"), mockMovie("2", title = "Spider-Man"))
+        every { useCase() } returns flowOf(movies)
+        coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase)
-
-        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
+        viewModel = HomeViewModel(useCase, repository)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
         advanceUntilIdle()
 
-        // Then
-        val state = viewModel.uiState.value
-        assertTrue(state is HomeUiState.Error)
-        assertEquals(errorMessage, (state as HomeUiState.Error).message)
+        viewModel.toggleSearch()
+        viewModel.onSearchQueryChange("Bat")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(1, state.movies.size)
+        assertEquals("Batman", state.movies.first().title)
 
         collectJob.cancel()
     }
 
     @Test
-    fun `onGenreSelected should filter movies by genre`() = runTest {
-        // Given
-        val movie1 = mockMovie("1", genres = listOf("Ação"))
-        val movie2 = mockMovie("2", genres = listOf("Drama"))
-        coEvery { useCase() } returns Result.success(listOf(movie1, movie2))
+    fun `when genre selected then should filter movies`() = runTest {
+        val movies = listOf(
+            mockMovie("1", genres = listOf("Action")),
+            mockMovie("2", genres = listOf("Drama"))
+        )
+        every { useCase() } returns flowOf(movies)
+        coEvery { repository.refreshMovies() } returns Result.success(Unit)
 
-        viewModel = HomeViewModel(useCase)
-        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect() }
-
-        // When
-        viewModel.onGenreSelected("Ação")
+        viewModel = HomeViewModel(useCase, repository)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
         advanceUntilIdle()
 
-        // Then
-        val state = viewModel.uiState.value as? HomeUiState.Success
-        assertEquals(1, state?.movies?.size)
-        assertEquals("1", state?.movies?.first()?.id)
+        viewModel.onGenreSelected("Action")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(1, state.movies.size)
+        assertEquals("Action", state.movies.first().genres.first())
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `extracted genres should be unique and sorted`() = runTest {
+        val movies = listOf(
+            mockMovie("1", genres = listOf("Drama", "Action")),
+            mockMovie("2", genres = listOf("Action", "Comedy"))
+        )
+        every { useCase() } returns flowOf(movies)
+        coEvery { repository.refreshMovies() } returns Result.success(Unit)
+
+        viewModel = HomeViewModel(useCase, repository)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as HomeUiState.Success
+        assertEquals(listOf("Action", "Comedy", "Drama"), state.genres)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `refreshMovies failure should update error state if movies empty`() = runTest {
+        every { useCase() } returns flowOf(emptyList())
+        coEvery { repository.refreshMovies() } returns Result.failure(Exception("Generic Error"))
+
+        viewModel = HomeViewModel(useCase, repository)
+        val collectJob = launch(UnconfinedTestDispatcher(testScheduler)) { 
+            viewModel.uiState.collect() 
+        }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state is HomeUiState.Error)
+        assertEquals("Generic Error", (state as HomeUiState.Error).message)
 
         collectJob.cancel()
     }
@@ -103,7 +158,7 @@ class HomeViewModelTest {
     private fun mockMovie(
         id: String,
         title: String = "Movie $id",
-        genres: List<String> = listOf("Ação")
+        genres: List<String> = emptyList()
     ) = Movie(
         id = id,
         title = title,
@@ -111,7 +166,7 @@ class HomeViewModelTest {
         premiereDate = null,
         inPreSale = false,
         synopsis = "",
-        categories = genres,
+        genres = genres,
         duration = null,
         rating = null
     )

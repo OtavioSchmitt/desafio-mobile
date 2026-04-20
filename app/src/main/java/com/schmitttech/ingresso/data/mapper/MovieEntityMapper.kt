@@ -5,8 +5,6 @@ import com.schmitttech.ingresso.domain.model.Movie
 import com.schmitttech.ingresso.domain.model.Rating
 import java.time.OffsetDateTime
 
-// ─── Domain → Entity ─────────────────────────────────────────────────────────
-
 /**
  * Converts a domain [Movie] to a [MovieEntity] for local storage.
  * [isFavorite] defaults to false when inserting from the network;
@@ -19,15 +17,13 @@ fun Movie.toEntity(isFavorite: Boolean = false) = MovieEntity(
     premiereDate = premiereDate?.toString(),
     inPreSale = inPreSale,
     synopsis = synopsis,
-    genres = categories.joinToString(","),
+    genres = genres.joinToString(","),
     duration = duration,
     ratingLabel = rating?.label,
     ratingColor = rating?.color,
     ratingDescription = rating?.description,
     isFavorite = isFavorite
 )
-
-// ─── Entity → Domain ─────────────────────────────────────────────────────────
 
 /**
  * Converts a [MovieEntity] (from the local DB) to a domain [Movie].
@@ -40,7 +36,7 @@ fun MovieEntity.toDomain() = Movie(
     premiereDate = premiereDate?.parseToOffsetDateTime(),
     inPreSale = inPreSale,
     synopsis = synopsis,
-    categories = genres.split(",").filter { it.isNotBlank() },
+    genres = genres.split(",").filter { it.isNotBlank() },
     duration = duration,
     rating = if (ratingLabel != null) {
         Rating(

@@ -17,7 +17,7 @@ fun MovieResponse.toDomain(): Movie {
         premiereDate = premiereDate?.localDate?.parseToOffsetDateTime(),
         inPreSale = inPreSale,
         synopsis = synopsis ?: "",
-        categories = genres,
+        genres = genres,
         duration = duration,
         rating = ratingDetails?.let {
             Rating(

@@ -1,5 +1,6 @@
 package com.schmitttech.ingresso.data.repository
 
+import android.util.Log
 import com.schmitttech.ingresso.data.local.dao.MovieDao
 import com.schmitttech.ingresso.data.mapper.toDomain
 import com.schmitttech.ingresso.data.mapper.toEntity
@@ -10,18 +11,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-/**
- * Implementation of the [MoviesRepository] repository.
- * Uses a "cache-first" strategy with Room.
- */
 class MoviesRepositoryImpl(
     private val api: IngressoApi,
     private val dao: MovieDao
 ) : MoviesRepository {
 
+    companion object {
+        private const val TAG = "MoviesRepository"
+    }
+
     override suspend fun refreshMovies(): Result<Unit> {
+        Log.d(TAG, "refreshMovies: Fetching from network")
         return runCatching {
             val networkResponse = api.getComingSoonMovies().items.map { it.toDomain() }
+            Log.d(TAG, "refreshMovies: Received ${networkResponse.size} movies from API")
+            
             val existingFavorites = dao.observeFavorites().first().map { it.id }.toSet()
             val entities = networkResponse.map { movie -> 
                 movie.toEntity(isFavorite = existingFavorites.contains(movie.id)) 
@@ -29,8 +33,11 @@ class MoviesRepositoryImpl(
 
             val currentIds = entities.map { it.id }
 
+            Log.d(TAG, "refreshMovies: Syncing DB, deleting stale and upserting ${entities.size} entities")
             dao.deleteStaleMovies(currentIds)
             dao.upsertAll(entities)
+        }.onFailure {
+            Log.e(TAG, "refreshMovies: Failed to refresh movies", it)
         }
     }
 

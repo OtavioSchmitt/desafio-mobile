@@ -13,9 +13,9 @@ class GetMovieDetailsUseCase(
     }
 
     fun getRelatedMovies(movie: Movie): Flow<List<Movie>> {
-        if (movie.categories.isEmpty()) return emptyFlow()
+        if (movie.genres.isEmpty()) return emptyFlow()
 
-        val primaryGenre = movie.categories.first()
+        val primaryGenre = movie.genres.first()
         return repository.observeRelatedByGenre(excludeId = movie.id, genre = primaryGenre)
     }
 }
